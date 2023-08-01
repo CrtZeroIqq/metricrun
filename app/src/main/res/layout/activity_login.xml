@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/darker_gray">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_margin="32dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="116dp"
+                    android:src="@drawable/logometric">
+
+                </ImageView>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/username_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:hintEnabled="true"
+                    app:boxBackgroundMode="outline">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/password_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:hintEnabled="true"
+                    app:boxBackgroundMode="outline"
+                    app:passwordToggleEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/password"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Password"
+                        android:inputType="textPassword" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/login"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Ingresar"
+                    android:textColor="@android:color/black"
+                    android:textSize="16dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:cornerRadius="16dp"/>
+
+                <TextView
+                    android:id="@+id/signup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="No tienes una cuenta?. Registrate"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:clickable="true"
+                    android:focusable="true" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Metric Run APP / Alpha Version 1.0"
+                    android:textAlignment="center"/>
+
+
+
+            </LinearLayout>
+
+        </ScrollView>
+    </androidx.cardview.widget.CardView>
+</RelativeLayout>
+
+
