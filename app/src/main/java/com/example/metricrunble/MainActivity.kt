@@ -36,6 +36,8 @@ import io.reactivex.disposables.Disposable
 import android.content.Intent
 import androidx.compose.ui.graphics.Color
 import com.example.metricrunble.R
+import android.provider.Settings
+import android.net.Uri
 
 class MainActivity : ComponentActivity() {
 
@@ -147,13 +149,22 @@ class MainActivity : ComponentActivity() {
             // Handle this situation accordingly
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, "android.permission.BLUETOOTH_SCAN")
+            != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, "android.permission.BLUETOOTH_CONNECT")
             != PackageManager.PERMISSION_GRANTED) {
             // You can request the permission.
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, "android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_CONNECT"),
                 LOCATION_PERMISSION_REQUEST_CODE
             )
+            // If permissions are not granted, open the app settings
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, "android.permission.BLUETOOTH_SCAN")
+                != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, "android.permission.BLUETOOTH_CONNECT")
+                != PackageManager.PERMISSION_GRANTED) {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+            }
         }
     }
 

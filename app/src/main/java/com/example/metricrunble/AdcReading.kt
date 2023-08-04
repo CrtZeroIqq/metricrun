@@ -7,8 +7,7 @@ data class AdcReading(
     val talon: Int,
     val adc4: Int,
     val macAddress: String,
-    val timeStamp: String// Agrega un nombre adecuado para este campo
-    //val averageApint: Double,
-    //val averageApext: Double
+    val timeStamp: String,
+    val user: String
 )
 

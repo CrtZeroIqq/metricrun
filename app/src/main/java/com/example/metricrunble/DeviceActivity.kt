@@ -51,6 +51,7 @@ data class ChartValues(
 
 class DeviceActivity : Activity() {
 
+    private lateinit var userEmail: String
     private val adcReadings = mutableListOf<AdcReading>()
     private val chartReadings = mutableListOf<Reading>()
     private lateinit var rxBleClient: RxBleClient
@@ -71,6 +72,7 @@ class DeviceActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device)
 
+        userEmail = intent.getStringExtra("userEmail") ?: ""
         adcValue1 = findViewById(R.id.adc_value_1)
         adcValue2 = findViewById(R.id.adc_value_2)
         averageApint = findViewById(R.id.average_apint)
@@ -111,7 +113,7 @@ class DeviceActivity : Activity() {
                     val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(Date())
                     val buffer = ByteBuffer.wrap(characteristicValue).order(ByteOrder.LITTLE_ENDIAN)
                     val adcValues = IntArray(4) { buffer.int }
-                    val newReading = AdcReading(adcValues[0], adcValues[1], adcValues[2], adcValues[3], macAddress, timeStamp)
+                    val newReading = AdcReading(adcValues[0], adcValues[1], adcValues[2], adcValues[3], macAddress, timeStamp, userEmail)
                     adcReadings.add(newReading)
                     Log.d("DeviceActivity", "adcReadings: $adcReadings")
                     if (adcReadings.size == 10) {
