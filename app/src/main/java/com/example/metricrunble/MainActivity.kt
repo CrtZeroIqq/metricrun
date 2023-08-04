@@ -49,12 +49,13 @@ class MainActivity : ComponentActivity() {
     private var connectionDisposable: Disposable? = null
     private val deviceList = mutableStateListOf<ScanResult>()
     private lateinit var rxBleClient: RxBleClient
+    private var userEmail: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         rxBleClient = RxBleClient.create(this)
         checkBluetoothAvailability()
-
+        userEmail = intent.getStringExtra("userEmail") ?: ""
         setContent {
             MetricRunBLETheme {
                 Surface(
@@ -130,6 +131,7 @@ class MainActivity : ComponentActivity() {
     private fun onDeviceSelected(device: RxBleDevice) {
         val intent = Intent(this, DeviceActivity::class.java).apply {
             putExtra("mac_address", device.macAddress)
+            putExtra("userEmail", userEmail)
         }
         startActivity(intent)
     }
