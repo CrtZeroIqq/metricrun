@@ -2,4 +2,6 @@
     <string name="app_name">MetricRun</string>
     <string name="title_activity_device">DeviceActivity</string>
     <string name="logo_metric_run">Logo Metric Run</string>
+    <string name="metricrun">MetricRun</string>
+    <string name="logo">logo</string>
 </resources>

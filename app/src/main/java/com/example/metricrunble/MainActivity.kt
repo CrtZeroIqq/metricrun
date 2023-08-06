@@ -86,6 +86,15 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Text(text = "Buscar Dispositivo", color = Color.White)
                             }
+                            Button(
+                                onClick = {
+                                    val intent = Intent(this@MainActivity, PrincipalActivity::class.java)
+                                    startActivity(intent)
+                                },
+                                colors = ButtonDefaults.buttonColors()
+                            ) {
+                                Text(text = "Quiero ver mis datos", color = Color.White)
+                            }
 
                             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                                 items(deviceList) { scanResult ->
