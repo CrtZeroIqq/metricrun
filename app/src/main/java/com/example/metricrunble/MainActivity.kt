@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                             }
                             Button(
                                 onClick = {
-                                    val intent = Intent(this@MainActivity, PrincipalActivity::class.java)
+                                    val intent = Intent(this@MainActivity, DeviceActivity::class.java)
                                     startActivity(intent)
                                 },
                                 colors = ButtonDefaults.buttonColors()
@@ -138,7 +138,7 @@ class MainActivity : ComponentActivity() {
 
 
     private fun onDeviceSelected(device: RxBleDevice) {
-        val intent = Intent(this, PrincipalActivity::class.java).apply {
+        val intent = Intent(this, DeviceActivity::class.java).apply {
             putExtra("mac_address", device.macAddress)
             putExtra("userEmail", userEmail)
         }
