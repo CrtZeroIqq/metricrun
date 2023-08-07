@@ -138,7 +138,7 @@ class MainActivity : ComponentActivity() {
 
 
     private fun onDeviceSelected(device: RxBleDevice) {
-        val intent = Intent(this, DeviceActivity::class.java).apply {
+        val intent = Intent(this, PrincipalActivity::class.java).apply {
             putExtra("mac_address", device.macAddress)
             putExtra("userEmail", userEmail)
         }

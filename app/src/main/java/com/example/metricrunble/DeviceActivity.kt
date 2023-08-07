@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 
-data class Reading(
+data class Reading1(
     val id: Int,
     val apint: Int,
     val apext: Int,
@@ -39,12 +39,12 @@ data class Reading(
     val timeStamp: String
 )
 
-data class Averages(
+data class Averages1(
     val average_apint: Double,
     val average_apext: Double
 )
 
-data class ChartValues(
+data class ChartValues1(
     val values: List<Reading>
 )
 
