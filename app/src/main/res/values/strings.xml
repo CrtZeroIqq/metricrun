@@ -6,4 +6,5 @@
     <string name="logo">logo</string>
     <string name="hola">Hola!</string>
     <string name="fondo_celda">Fondo_Celda</string>
+    <string name="iniciar">Iniciar</string>
 </resources>

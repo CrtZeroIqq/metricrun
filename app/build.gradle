@@ -6,7 +6,9 @@ plugins {
 android {
     namespace 'com.example.metricrunble'
     compileSdk 33
-
+    lintOptions {
+        disable 'CheckResult'
+    }
     defaultConfig {
         applicationId "com.example.metricrunble"
         minSdk 24

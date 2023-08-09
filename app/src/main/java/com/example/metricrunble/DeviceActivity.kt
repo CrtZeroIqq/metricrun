@@ -1,20 +1,15 @@
+@file:Suppress("UNUSED_VARIABLE")
+
 package com.example.metricrunble
 
 import android.app.Activity
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.widget.TextView
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.utils.ColorTemplate
+import android.widget.ImageView
+import android.widget.Switch
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.polidea.rxandroidble2.RxBleClient
 import com.polidea.rxandroidble2.RxBleDevice
-import io.reactivex.rxjava3.core.Observable
 import okhttp3.*
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -24,85 +19,61 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.scheduleAtFixedRate
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import com.github.anastr.speedviewlib.SpeedView
-import com.github.anastr.speedviewlib.Speedometer
 import java.text.SimpleDateFormat
 import java.util.Date
+import android.widget.TextView
+import org.json.JSONException
+import org.json.JSONObject
 
-
-data class Reading(
-    val id: Int,
-    val apint: Int,
-    val apext: Int,
-    val talon: Int,
-    val macAddress: String,
-    val timeStamp: String
-)
-
-data class Averages(
-    val average_apint: Double,
-    val average_apext: Double
-)
-
-data class ChartValues(
-    val values: List<Reading>
-)
 
 class DeviceActivity : Activity() {
 
     private val adcReadings = mutableListOf<AdcReading>()
-    private val chartReadings = mutableListOf<Reading>()
     private lateinit var rxBleClient: RxBleClient
-    private lateinit var adcValue1: TextView
-    private lateinit var adcValue2: TextView
-    private lateinit var averageApint: TextView
-    private lateinit var averageApext: TextView
-    private lateinit var chart: LineChart
-    private val okHttpClient = OkHttpClient()
-    private val gson = Gson()
-    private lateinit var apintSpeedometer: SpeedView
-    private lateinit var apextSpeedometer: SpeedView
     private var userEmail: String = "" // Declare the userEmail variable here
+    private lateinit var device: RxBleDevice
+    private var isConnectionActive = false
+    private val okHttpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device)
 
-        adcValue1 = findViewById(R.id.adc_value_1)
-        adcValue2 = findViewById(R.id.adc_value_2)
-        averageApint = findViewById(R.id.average_apint)
-        averageApext = findViewById(R.id.average_apext)
-        apintSpeedometer = findViewById(R.id.apint_speedometer)
-        apextSpeedometer = findViewById(R.id.apext_speedometer)
-        chart = findViewById(R.id.lineChart)
-
-         // Retrieve the userEmail from the Intent
-
-        apintSpeedometer.setMaxSpeed(4095F)
-        apintSpeedometer.unitUnderSpeedText = false
-
-        apextSpeedometer.setMaxSpeed(4095F)
-
         rxBleClient = RxBleClient.create(this)
         val macAddress = intent.getStringExtra("mac_address") ?: return
-        val device = rxBleClient.getBleDevice(macAddress)
-
+        device = rxBleClient.getBleDevice(macAddress)
+        val imageView: ImageView = findViewById(R.id.imageView)
+        imageView.setImageResource(R.drawable.top)
         Timer().scheduleAtFixedRate(0, 1000) {
-            fetchAndDisplayData(device)
-            fetchAndDisplayChartData(device)
+
+        }
+        val switch: Switch = findViewById(R.id.switch1)
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            isConnectionActive = isChecked
+            if (isChecked) {
+                connectToDeviceAndReadAdcValues(device)
+            }
         }
 
-        connectToDeviceAndReadAdcValues(device)
+
     }
+
     override fun onStart() {
         super.onStart()
 
-        userEmail = intent.getStringExtra("userEmail") ?: "" // Retrieve the userEmail from the Intent
-
+        userEmail =
+            intent.getStringExtra("userEmail") ?: "" // Retrieve the userEmail from the Intent
+        fetchUserName()
+        val macAddress = intent.getStringExtra("mac_address") ?: return
+        val userEmail = intent.getStringExtra("userEmail") ?: return
+        fetchLastConnection(macAddress, userEmail)
         // ...
     }
+
     private val CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
     private fun connectToDeviceAndReadAdcValues(device: RxBleDevice) {
+        val disposable = device.establishConnection(false)
         device.establishConnection(false)
             .flatMap { rxBleConnection ->
                 rxBleConnection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
@@ -111,11 +82,20 @@ class DeviceActivity : Activity() {
             }
             .subscribe(
                 { characteristicValue ->
+                    if (!isConnectionActive) return@subscribe
                     val macAddress = device.macAddress
-                    val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(Date())
+                    val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss",Locale.US).format(Date())
                     val buffer = ByteBuffer.wrap(characteristicValue).order(ByteOrder.LITTLE_ENDIAN)
                     val adcValues = IntArray(4) { buffer.int }
-                    val newReading = AdcReading(adcValues[0], adcValues[1], adcValues[2], adcValues[3], macAddress, timeStamp, userEmail)
+                    val newReading = AdcReading(
+                        adcValues[0],
+                        adcValues[1],
+                        adcValues[2],
+                        adcValues[3],
+                        macAddress,
+                        timeStamp,
+                        userEmail
+                    )
                     adcReadings.add(newReading)
                     Log.d("DeviceActivity", "adcReadings: $adcReadings")
                     if (adcReadings.size == 10) {
@@ -124,14 +104,14 @@ class DeviceActivity : Activity() {
                     }
 
                     runOnUiThread {
-                        adcValue1.text = adcValues[0].toString()
-                        adcValue2.text = adcValues[1].toString()
+
                     }
                 },
                 { throwable ->
                     Log.e("DeviceActivity", "Error while setting up notifications", throwable)
                 }
             )
+
     }
 
     private fun postDataToServer(adcReadings: List<AdcReading>) {
@@ -159,16 +139,44 @@ class DeviceActivity : Activity() {
             }
         })
     }
+    private fun fetchUserName() {
+        val url = "http://54.221.216.132/metricrun/get_username.php?email=$userEmail"
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(url)
+            .build()
+        Log.d("fetchUserName", "URL: $url")
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("DeviceActivity", "Error fetching username", e)
+            }
 
-    private fun fetchAndDisplayData(device: RxBleDevice) {
-        val macAddress = device.macAddress
+            override fun onResponse(call: Call, response: Response) {
+                val responseString = response.body?.string()
+                if (response.isSuccessful && responseString != null) {
+                    val jsonObject = JSONObject(responseString)
+                    val username = jsonObject.getString("username")
+                    runOnUiThread {
+                        // Actualiza el TextView con el nombre de usuario
+                        val userNameTextView = findViewById<TextView>(R.id.userName)
+                        userNameTextView.text = username
+                        Log.i("DeviceActivity", "Username: $username")
+                    }
+                } else {
+                    Log.e("DeviceActivity", "Unsuccessful response: ${response.message}")
+                }
+            }
+        })
+    }
 
+    private fun fetchLastConnection(macAddress: String, userEmail: String) {
         val url = HttpUrl.Builder()
             .scheme("http")
             .host("54.221.216.132")
             .addPathSegment("metricrun")
-            .addPathSegment("get_data.php")
+            .addPathSegment("get_date.php") // Cambia esto a la ruta correcta de tu archivo PHP
             .addQueryParameter("macAddress", macAddress)
+            .addQueryParameter("userEmail", userEmail) // Asegúrate de pasar el correo electrónico del usuario logueado
             .build()
 
         val request = Request.Builder()
@@ -177,99 +185,36 @@ class DeviceActivity : Activity() {
 
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("DeviceActivity", "Error fetching data", e)
+                Log.e("PrincipalActivity", "Error fetching last connection", e)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val body = response.body?.string()
                 if (body != null) {
                     try {
-                        val averages: Averages = gson.fromJson(body, Averages::class.java)
-
-                        Log.d("DeviceActivity", "Averages from server: $averages")
+                        val jsonObject = JSONObject(body)
+                        val lastConnection = jsonObject.getString("last_connection")
 
                         runOnUiThread {
-                            averageApint.text = averages.average_apint.toString()
-                            averageApext.text = averages.average_apext.toString()
-
-                            apintSpeedometer.speedTo(averages.average_apint.toFloat(), 2000)
-                            apextSpeedometer.speedTo(averages.average_apext.toFloat(), 2000)
+                            val lastConnectionTextView: TextView = findViewById(R.id.lastConnectionTextView) // Cambia esto al ID correcto de tu TextView
+                            lastConnectionTextView.text = "$lastConnection"
                         }
-                    } catch (e: JsonSyntaxException) {
-                        Log.e("DeviceActivity", "Json parsing error", e)
+                    } catch (e: JSONException) {
+                        Log.e("PrincipalActivity", "Json parsing error", e)
                     }
                 } else {
-                    Log.e("DeviceActivity", "Server returned empty response body")
+                    Log.e("PrincipalActivity", "Server returned empty response body")
                 }
             }
         })
     }
 
-
-    private fun fetchAndDisplayChartData(device: RxBleDevice) {
-        val macAddress = device.macAddress
-
-        val url = HttpUrl.Builder()
-            .scheme("http")
-            .host("54.221.216.132")
-            .addPathSegment("metricrun")
-            .addPathSegment("get_chart.php")
-            .addQueryParameter("macAddress", macAddress)
-            .build()
-
-        val request = Request.Builder()
-            .url(url)
-            .build()
-
-        okHttpClient.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("DeviceActivity", "Error fetching chart data", e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                val body = response.body?.string()
-                if (body != null) {
-                    try {
-                        val chartValues: ChartValues = gson.fromJson(body, ChartValues::class.java)
-
-                        Log.d("DeviceActivity", "Chart values from server: $chartValues")
-
-                        runOnUiThread {
-                            chartValues.values?.let {
-                                displayChart(it)
-                            }
-                        }
-                    } catch (e: JsonSyntaxException) {
-                        Log.e("DeviceActivity", "Json parsing error", e)
-                    }
-                } else {
-                    Log.e("DeviceActivity", "Server returned empty response body")
-                }
-            }
-        })
-    }
-
-
-    private fun displayChart(readings: List<Reading>?) {
-        val apintValues = mutableListOf<Entry>()
-        val apextValues = mutableListOf<Entry>()
-
-        readings?.let { list ->
-            for (i in list.indices) {
-                apintValues.add(Entry(i.toFloat(), list[i].apint.toFloat()))
-                apextValues.add(Entry(i.toFloat(), list[i].apext.toFloat()))
-            }
-        }
-
-        val apintDataSet = LineDataSet(apintValues, "APInt").apply {
-            setColor(Color.RED)
-        }
-        val apextDataSet = LineDataSet(apextValues, "APExt").apply {
-            setColor(Color.GREEN)
-        }
-        val data = LineData(apintDataSet, apextDataSet)
-        chart.data = data
-        chart.invalidate()
-    }
 
 }
+
+
+
+
+
+
+

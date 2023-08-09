@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.metricrunble
 
 import android.Manifest
@@ -15,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +36,6 @@ import com.polidea.rxandroidble2.scan.ScanSettings
 import io.reactivex.disposables.Disposable
 import android.content.Intent
 import androidx.compose.ui.graphics.Color
-import com.example.metricrunble.R
 import android.provider.Settings
 import android.net.Uri
 
@@ -180,6 +180,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {

@@ -1,4 +1,4 @@
-package com.example.metricrunble // Aquí debes poner el nombre de tu paquete
+package com.example.metricrunble
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
 import okhttp3.ResponseBody
-import org.mindrot.jbcrypt.BCrypt
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
