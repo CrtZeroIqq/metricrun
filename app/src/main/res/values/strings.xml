@@ -7,4 +7,5 @@
     <string name="hola">Hola!</string>
     <string name="fondo_celda">Fondo_Celda</string>
     <string name="iniciar">Iniciar</string>
+    <string name="vamos_a_calibrar_tu_dispositivo">Vamos a calibrar tu dispositivo</string>
 </resources>

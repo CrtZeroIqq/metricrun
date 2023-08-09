@@ -2,9 +2,18 @@
 
 package com.example.metricrunble
 
-import android.app.Activity
+
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Switch
 import com.google.gson.Gson
@@ -22,11 +31,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.Date
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.DialogFragment
 import org.json.JSONException
 import org.json.JSONObject
 
 
-class DeviceActivity : Activity() {
+class DeviceActivity : AppCompatActivity() {
 
     private val adcReadings = mutableListOf<AdcReading>()
     private lateinit var rxBleClient: RxBleClient
@@ -34,6 +46,35 @@ class DeviceActivity : Activity() {
     private lateinit var device: RxBleDevice
     private var isConnectionActive = false
     private val okHttpClient = OkHttpClient()
+
+    class MyDialogFragment : DialogFragment() {
+        override fun onCreateView(
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View? {
+            return inflater.inflate(R.layout.calibrate_layout, container, false)
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // Personaliza las vistas aquí si es necesario
+        }
+
+        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+            val dialog = super.onCreateDialog(savedInstanceState)
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+            return dialog
+        }
+
+        override fun onStart() {
+            super.onStart()
+            dialog?.window?.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +94,11 @@ class DeviceActivity : Activity() {
             if (isChecked) {
                 connectToDeviceAndReadAdcValues(device)
             }
+        }
+        val button = findViewById<Button>(R.id.myButton)
+        button.setOnClickListener {
+            val dialogFragment = MyDialogFragment()
+            dialogFragment.show(supportFragmentManager, "MyDialogFragment")
         }
 
 

@@ -40,9 +40,10 @@
             android:theme="@style/Theme.MetricRunBLE">
         </activity>
 
-        <activity android:name=".DeviceActivity" />
-        <activity android:name=".PrincipalActivity"
-            android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/>
+        <activity
+         android:name=".DeviceActivity"
+         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"/>
+
         <activity android:name=".SignUpActivity"
             android:theme="@style/LoginTheme"
             android:exported="true">
