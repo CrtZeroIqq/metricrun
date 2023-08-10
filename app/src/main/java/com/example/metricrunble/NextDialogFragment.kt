@@ -1,13 +1,29 @@
 package com.example.metricrunble
 
-
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.LinearInterpolator
+import android.widget.ProgressBar
 import androidx.fragment.app.DialogFragment
 
 class NextDialogFragment : DialogFragment() {
+
+    interface CalibrationCallback {
+        fun onCalibrationStart()
+    }
+
+    private var callback: CalibrationCallback? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        callback = context as? CalibrationCallback
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -20,7 +36,21 @@ class NextDialogFragment : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Configura los elementos de la vista según tus necesidades
+        val circularProgressBar = view.findViewById<ProgressBar>(R.id.circularProgressBar)
+        circularProgressBar.max = 100 // Establece el máximo en 100 para representar el 100%
+
+        // Crea un ValueAnimator para animar el progreso de 0 a 100 en 20 segundos
+        val animator = ValueAnimator.ofInt(0, 100)
+        animator.duration = 20000 // Duración de 20 segundos
+        animator.interpolator = LinearInterpolator()
+        animator.addUpdateListener { animation ->
+            val progress = animation.animatedValue as Int
+            if (progress == 0) {
+                callback?.onCalibrationStart() // Llama al callback al inicio de la animación
+            }
+            circularProgressBar.progress = progress // Actualiza el progreso manualmente
+        }
+        animator.start() // Inicia la animación
     }
 
     override fun onStart() {
@@ -30,9 +60,11 @@ class NextDialogFragment : DialogFragment() {
             val width = resources.getDimensionPixelSize(R.dimen.dialog_width)
             val height = resources.getDimensionPixelSize(R.dimen.dialog_height)
             setLayout(width, height)
-
-            // Opcional: Establece los bordes redondos
-            setBackgroundDrawableResource(R.drawable.calibrate_background)
         }
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        callback = null
     }
 }
