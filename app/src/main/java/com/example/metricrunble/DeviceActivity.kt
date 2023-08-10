@@ -12,34 +12,32 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.Switch
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.DialogFragment
 import com.google.gson.Gson
 import com.polidea.rxandroidble2.RxBleClient
 import com.polidea.rxandroidble2.RxBleDevice
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.scheduleAtFixedRate
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.text.SimpleDateFormat
-import java.util.Date
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.DialogFragment
-import org.json.JSONException
-import org.json.JSONObject
 
 
 class DeviceActivity : AppCompatActivity() {
 
+    private var calibrated: Int? = null
     private val adcReadings = mutableListOf<AdcReading>()
     private lateinit var rxBleClient: RxBleClient
     private var userEmail: String = "" // Declare the userEmail variable here
@@ -79,6 +77,7 @@ class DeviceActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device)
+        Log.d("DeviceActivity", "Calibration status: $calibrated")
 
         rxBleClient = RxBleClient.create(this)
         val macAddress = intent.getStringExtra("mac_address") ?: return
@@ -104,15 +103,25 @@ class DeviceActivity : AppCompatActivity() {
 
     }
 
+    private fun showCalibrationDialog() {
+        val dialogFragment = CalibrationDialogFragment()
+        dialogFragment.show(supportFragmentManager, "calibrationDialog")
+    }
+
     override fun onStart() {
         super.onStart()
 
-        userEmail =
-            intent.getStringExtra("userEmail") ?: "" // Retrieve the userEmail from the Intent
+        userEmail = intent.getStringExtra("userEmail") ?: "" // Retrieve the userEmail from the Intent
         fetchUserName()
         val macAddress = intent.getStringExtra("mac_address") ?: return
         val userEmail = intent.getStringExtra("userEmail") ?: return
+        val calibrated = intent.getIntExtra("calibrated", 0)
+        Log.d("DeviceActivity", "Calibration status in Device: $calibrated")
         fetchLastConnection(macAddress, userEmail)
+        if (calibrated == 0) {
+            showCalibrationDialog()
+        }
+
         // ...
     }
 

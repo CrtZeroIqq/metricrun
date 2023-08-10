@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 123
     }
-
+    private var calibrated: Int? = null
     private var scanDisposable: Disposable? = null
     private var connectionDisposable: Disposable? = null
     private val deviceList = mutableStateListOf<ScanResult>()
@@ -53,6 +53,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        calibrated = intent.getIntExtra("calibrated", 0)
+        Log.d("MainActivity", "Calibration status in Main: $calibrated")
         rxBleClient = RxBleClient.create(this)
         checkBluetoothAvailability()
         userEmail = intent.getStringExtra("userEmail") ?: ""
@@ -141,6 +143,7 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(this, DeviceActivity::class.java).apply {
             putExtra("mac_address", device.macAddress)
             putExtra("userEmail", userEmail)
+            putExtra("calibrated", calibrated)
         }
         startActivity(intent)
     }

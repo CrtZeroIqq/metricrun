@@ -18,6 +18,10 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 class LoginActivity : AppCompatActivity() {
+    data class LoginResponse(
+        val status: String,
+        val calibrated: Int
+    )
 
     private lateinit var signUpTextView: TextView
     private lateinit var loginButton: Button
@@ -52,14 +56,17 @@ class LoginActivity : AppCompatActivity() {
                 password.text.toString()
             )
             Log.d("LoginActivity", "Sending POST request: email=$userEmail, password=$userPassword")
-            service.loginUser(user).enqueue(object : Callback<ResponseBody> {
-                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+            service.loginUser(user).enqueue(object : Callback<LoginResponse> {
+                override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
                     if (response.isSuccessful) {
+                        val loginResponse = response.body()
                         Log.d("Response", "Logged in successfully")
+                        Log.d("LoginActivity", "Calibration status in Login: ${loginResponse?.calibrated}")
                         Toast.makeText(this@LoginActivity, "Logged in successfully!", Toast.LENGTH_SHORT).show()
 
                         val intent = Intent(this@LoginActivity, MainActivity::class.java)
                         intent.putExtra("userEmail", userEmail)
+                        intent.putExtra("calibrated", loginResponse?.calibrated)
                         startActivity(intent)
                     } else {
                         Log.d("Response", "Login failed")
@@ -69,7 +76,8 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
 
-                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+
+                override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
                     Log.d("Failure", t.message.toString())
                     Toast.makeText(this@LoginActivity, "Login failed: ${t.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -79,11 +87,11 @@ class LoginActivity : AppCompatActivity() {
 
     interface ApiService {
         @POST("login_user.php")
-        fun loginUser(@Body user: User): Call<ResponseBody>
+        fun loginUser(@Body user: User): Call<LoginResponse>
     }
-
     data class User(
         val email: String,
         val password: String
     )
+
 }
