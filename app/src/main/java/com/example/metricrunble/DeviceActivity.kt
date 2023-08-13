@@ -2,7 +2,6 @@
 
 package com.example.metricrunble
 
-
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -20,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import com.google.gson.Gson
 import com.polidea.rxandroidble2.RxBleClient
+import com.polidea.rxandroidble2.RxBleConnection
 import com.polidea.rxandroidble2.RxBleDevice
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,6 +33,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.scheduleAtFixedRate
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
 
 
 class DeviceActivity : AppCompatActivity() {
@@ -40,10 +42,16 @@ class DeviceActivity : AppCompatActivity() {
     private var calibrated: Int? = null
     private val adcReadings = mutableListOf<AdcReading>()
     private lateinit var rxBleClient: RxBleClient
-    private var userEmail: String = "" // Declare the userEmail variable here
+    private var userEmail: String = ""
     private lateinit var device: RxBleDevice
     private var isConnectionActive = false
     private val okHttpClient = OkHttpClient()
+    private var rxBleConnection: RxBleConnection? = null
+
+    interface ServerResponseCallback {
+        fun onResponse(response: String)
+        fun onError(error: String)
+    }
 
     class MyDialogFragment : DialogFragment() {
         override fun onCreateView(
@@ -55,7 +63,6 @@ class DeviceActivity : AppCompatActivity() {
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
             super.onViewCreated(view, savedInstanceState)
-            // Personaliza las vistas aquí si es necesario
         }
 
         override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -84,9 +91,8 @@ class DeviceActivity : AppCompatActivity() {
         device = rxBleClient.getBleDevice(macAddress)
         val imageView: ImageView = findViewById(R.id.imageView)
         imageView.setImageResource(R.drawable.top)
-        Timer().scheduleAtFixedRate(0, 1000) {
+        Timer().scheduleAtFixedRate(0, 1000) {}
 
-        }
         val switch: Switch = findViewById(R.id.switch1)
         switch.setOnCheckedChangeListener { _, isChecked ->
             isConnectionActive = isChecked
@@ -99,8 +105,6 @@ class DeviceActivity : AppCompatActivity() {
             val dialogFragment = MyDialogFragment()
             dialogFragment.show(supportFragmentManager, "MyDialogFragment")
         }
-
-
     }
 
     private fun showCalibrationDialog() {
@@ -111,7 +115,7 @@ class DeviceActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        userEmail = intent.getStringExtra("userEmail") ?: "" // Retrieve the userEmail from the Intent
+        userEmail = intent.getStringExtra("userEmail") ?: ""
         fetchUserName()
         val macAddress = intent.getStringExtra("mac_address") ?: return
         val userEmail = intent.getStringExtra("userEmail") ?: return
@@ -121,8 +125,6 @@ class DeviceActivity : AppCompatActivity() {
         if (calibrated == 0) {
             showCalibrationDialog()
         }
-
-        // ...
     }
 
     private val CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -130,8 +132,9 @@ class DeviceActivity : AppCompatActivity() {
     private fun connectToDeviceAndReadAdcValues(device: RxBleDevice) {
         val disposable = device.establishConnection(false)
         device.establishConnection(false)
-            .flatMap { rxBleConnection ->
-                rxBleConnection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
+            .flatMap { connection ->
+                rxBleConnection = connection
+                connection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
                     .repeatWhen { completed -> completed.delay(1, TimeUnit.SECONDS) }
                     .toObservable()
             }
@@ -157,19 +160,63 @@ class DeviceActivity : AppCompatActivity() {
                         postDataToServer(adcReadings)
                         adcReadings.clear()
                     }
-
-                    runOnUiThread {
-
-                    }
                 },
                 { throwable ->
                     Log.e("DeviceActivity", "Error while setting up notifications", throwable)
                 }
             )
-
     }
 
-    private fun postDataToServer(adcReadings: List<AdcReading>) {
+    internal fun readAdcValuesForCalibration(device: RxBleDevice, callback: ServerResponseCallback?) {
+        Log.d("DeviceActivity", "Inside readAdcValuesForCalibration function")
+
+        val stopSignal = Observable.timer(20, TimeUnit.SECONDS).publish()
+
+        val connectionToUse: Observable<RxBleConnection> = rxBleConnection?.let {
+            Observable.just(it)
+        } ?: device.establishConnection(false).observeOn(AndroidSchedulers.mainThread())
+
+        connectionToUse
+            .flatMap { connection ->
+                rxBleConnection = connection
+                connection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
+                    .repeatWhen { completed -> completed.delay(1, TimeUnit.SECONDS) }
+                    .toObservable()
+                    .takeUntil(stopSignal)
+            }
+            .subscribe(
+                { characteristicValue ->
+                    // Procesamiento del valor de la característica
+                    val buffer = ByteBuffer.wrap(characteristicValue).order(ByteOrder.LITTLE_ENDIAN)
+                    val adcValues = IntArray(4) { buffer.int }
+                    val macAddress = device.macAddress
+                    val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss", Locale.US).format(Date())
+                    val newReading = AdcReading(
+                        adcValues[0],
+                        adcValues[1],
+                        adcValues[2],
+                        adcValues[3],
+                        macAddress,
+                        timeStamp,
+                        userEmail
+                    )
+                    adcReadings.add(newReading)
+                    if (adcReadings.size == 10) {
+                        postDataToServer(adcReadings)
+                        adcReadings.clear()
+                    }
+                },
+                { throwable ->
+                    // Manejo de errores
+                    Log.e("DeviceActivity", "Error reading ADC values", throwable)
+                }
+            )
+
+        stopSignal.connect()
+    }
+
+    private fun postDataToServer(adcReadings: List<AdcReading>, callback: ServerResponseCallback? = null) {
+        Log.d("DeviceActivity", "postDataToServer called with ${adcReadings.size} readings")
         val client = OkHttpClient()
         val jsonData = Gson().toJson(adcReadings)
         Log.d("DeviceActivity", "Posting data: $jsonData")
@@ -182,18 +229,24 @@ class DeviceActivity : AppCompatActivity() {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("DeviceActivity", "Error posting data", e)
+                callback?.onError(e.message ?: "Unknown error")
             }
 
             override fun onResponse(call: Call, response: Response) {
-                Log.i("DeviceActivity", "Server response body: ${response.body?.string()}")
+                val responseBody = response.body?.string() ?: ""
+                Log.d("DeviceActivity", "Data posted successfully: $responseBody")
                 if (!response.isSuccessful) {
                     Log.e("DeviceActivity", "Unsuccessful response: ${response.message}")
+                    callback?.onError(response.message ?: "Unknown error")
                 } else {
                     Log.i("DeviceActivity", "Successfully posted data")
+                    callback?.onResponse(responseBody)
                 }
             }
         })
     }
+
+
     private fun fetchUserName() {
         val url = "http://54.221.216.132/metricrun/get_username.php?email=$userEmail"
         val client = OkHttpClient()
@@ -212,7 +265,6 @@ class DeviceActivity : AppCompatActivity() {
                     val jsonObject = JSONObject(responseString)
                     val username = jsonObject.getString("username")
                     runOnUiThread {
-                        // Actualiza el TextView con el nombre de usuario
                         val userNameTextView = findViewById<TextView>(R.id.userName)
                         userNameTextView.text = username
                         Log.i("DeviceActivity", "Username: $username")
@@ -229,9 +281,9 @@ class DeviceActivity : AppCompatActivity() {
             .scheme("http")
             .host("54.221.216.132")
             .addPathSegment("metricrun")
-            .addPathSegment("get_date.php") // Cambia esto a la ruta correcta de tu archivo PHP
+            .addPathSegment("get_date.php")
             .addQueryParameter("macAddress", macAddress)
-            .addQueryParameter("userEmail", userEmail) // Asegúrate de pasar el correo electrónico del usuario logueado
+            .addQueryParameter("userEmail", userEmail)
             .build()
 
         val request = Request.Builder()
@@ -251,7 +303,7 @@ class DeviceActivity : AppCompatActivity() {
                         val lastConnection = jsonObject.getString("last_connection")
 
                         runOnUiThread {
-                            val lastConnectionTextView: TextView = findViewById(R.id.lastConnectionTextView) // Cambia esto al ID correcto de tu TextView
+                            val lastConnectionTextView: TextView = findViewById(R.id.lastConnectionTextView)
                             lastConnectionTextView.text = "$lastConnection"
                         }
                     } catch (e: JSONException) {
@@ -263,12 +315,7 @@ class DeviceActivity : AppCompatActivity() {
             }
         })
     }
-
-
 }
-
-
-
 
 
 

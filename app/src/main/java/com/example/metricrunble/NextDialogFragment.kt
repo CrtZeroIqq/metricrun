@@ -1,10 +1,9 @@
 package com.example.metricrunble
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,11 +13,14 @@ import androidx.fragment.app.DialogFragment
 
 class NextDialogFragment : DialogFragment() {
 
+
     interface CalibrationCallback {
         fun onCalibrationStart()
     }
 
     private var callback: CalibrationCallback? = null
+    private var calibrationStarted = false
+
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -45,11 +47,25 @@ class NextDialogFragment : DialogFragment() {
         animator.interpolator = LinearInterpolator()
         animator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Int
-            if (progress == 0) {
-                callback?.onCalibrationStart() // Llama al callback al inicio de la animación
+            circularProgressBar.progress = progress
+
+            // Solo llama a la función cuando la animación comienza (es decir, cuando el progreso es 0) y solo una vez
+            if (progress == 0 && !calibrationStarted) {
+                calibrationStarted = true
+                Log.d("NextDialogFragment", "Starting calibration...")
+                (activity as? DeviceActivity)?.readAdcValuesForCalibration(device, object : DeviceActivity.ServerResponseCallback {
+                    override fun onResponse(response: String) {
+                        Log.d("NextDialogFragment", "Server Response: $response")
+                    }
+
+                    override fun onError(error: String) {
+                        Log.e("NextDialogFragment", "Error during calibration: $error")
+                    }
+                })
+
             }
-            circularProgressBar.progress = progress // Actualiza el progreso manualmente
         }
+
         animator.start() // Inicia la animación
     }
 
