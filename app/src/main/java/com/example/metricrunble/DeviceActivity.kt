@@ -36,8 +36,12 @@ import kotlin.concurrent.scheduleAtFixedRate
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 
+interface DeviceProvider {
+    fun getDevice(): RxBleDevice?
+}
 
-class DeviceActivity : AppCompatActivity() {
+
+class DeviceActivity : AppCompatActivity(), DeviceProvider {
 
     private var calibrated: Int? = null
     private val adcReadings = mutableListOf<AdcReading>()
@@ -48,6 +52,9 @@ class DeviceActivity : AppCompatActivity() {
     private val okHttpClient = OkHttpClient()
     private var rxBleConnection: RxBleConnection? = null
 
+    override fun getDevice(): RxBleDevice? {
+        return device
+    }
     interface ServerResponseCallback {
         fun onResponse(response: String)
         fun onError(error: String)

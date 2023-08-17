@@ -10,17 +10,16 @@ import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.widget.ProgressBar
 import androidx.fragment.app.DialogFragment
+import com.polidea.rxandroidble2.RxBleDevice
+
+interface CalibrationCallback {
+    fun onCalibrationStart()
+    fun getDevice(): RxBleDevice?
+}
 
 class NextDialogFragment : DialogFragment() {
-
-
-    interface CalibrationCallback {
-        fun onCalibrationStart()
-    }
-
     private var callback: CalibrationCallback? = null
     private var calibrationStarted = false
-
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -39,34 +38,35 @@ class NextDialogFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val circularProgressBar = view.findViewById<ProgressBar>(R.id.circularProgressBar)
-        circularProgressBar.max = 100 // Establece el máximo en 100 para representar el 100%
+        circularProgressBar.max = 100
 
-        // Crea un ValueAnimator para animar el progreso de 0 a 100 en 20 segundos
         val animator = ValueAnimator.ofInt(0, 100)
-        animator.duration = 20000 // Duración de 20 segundos
+        animator.duration = 20000
         animator.interpolator = LinearInterpolator()
         animator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Int
             circularProgressBar.progress = progress
 
-            // Solo llama a la función cuando la animación comienza (es decir, cuando el progreso es 0) y solo una vez
             if (progress == 0 && !calibrationStarted) {
                 calibrationStarted = true
                 Log.d("NextDialogFragment", "Starting calibration...")
-                (activity as? DeviceActivity)?.readAdcValuesForCalibration(device, object : DeviceActivity.ServerResponseCallback {
-                    override fun onResponse(response: String) {
-                        Log.d("NextDialogFragment", "Server Response: $response")
-                    }
 
-                    override fun onError(error: String) {
-                        Log.e("NextDialogFragment", "Error during calibration: $error")
-                    }
-                })
+                val device = callback?.getDevice()
+                device?.let {
+                    (activity as? DeviceActivity)?.readAdcValuesForCalibration(it, object : DeviceActivity.ServerResponseCallback {
+                        override fun onResponse(response: String) {
+                            Log.d("NextDialogFragment", "Server Response: $response")
+                        }
 
+                        override fun onError(error: String) {
+                            Log.e("NextDialogFragment", "Error during calibration: $error")
+                        }
+                    })
+                }
             }
         }
 
-        animator.start() // Inicia la animación
+        animator.start()
     }
 
     override fun onStart() {
