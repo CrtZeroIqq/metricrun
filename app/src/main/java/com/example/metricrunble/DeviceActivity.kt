@@ -33,15 +33,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.scheduleAtFixedRate
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
 
-interface DeviceProvider {
-    fun getDevice(): RxBleDevice?
-}
-
-
-class DeviceActivity : AppCompatActivity(), DeviceProvider {
+class DeviceActivity : AppCompatActivity() {
 
     private var calibrated: Int? = null
     private val adcReadings = mutableListOf<AdcReading>()
@@ -52,9 +45,6 @@ class DeviceActivity : AppCompatActivity(), DeviceProvider {
     private val okHttpClient = OkHttpClient()
     private var rxBleConnection: RxBleConnection? = null
 
-    override fun getDevice(): RxBleDevice? {
-        return device
-    }
     interface ServerResponseCallback {
         fun onResponse(response: String)
         fun onError(error: String)
@@ -174,56 +164,55 @@ class DeviceActivity : AppCompatActivity(), DeviceProvider {
             )
     }
 
-    internal fun readAdcValuesForCalibration(device: RxBleDevice, callback: ServerResponseCallback?) {
+    internal fun readAdcValuesForCalibration(callback: ServerResponseCallback?) {
         Log.d("DeviceActivity", "Inside readAdcValuesForCalibration function")
 
-        val stopSignal = Observable.timer(20, TimeUnit.SECONDS).publish()
-
-        val connectionToUse: Observable<RxBleConnection> = rxBleConnection?.let {
-            Observable.just(it)
-        } ?: device.establishConnection(false).observeOn(AndroidSchedulers.mainThread())
-
-        connectionToUse
-            .flatMap { connection ->
-                rxBleConnection = connection
-                connection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
-                    .repeatWhen { completed -> completed.delay(1, TimeUnit.SECONDS) }
-                    .toObservable()
-                    .takeUntil(stopSignal)
-            }
-            .subscribe(
-                { characteristicValue ->
-                    // Procesamiento del valor de la característica
-                    val buffer = ByteBuffer.wrap(characteristicValue).order(ByteOrder.LITTLE_ENDIAN)
-                    val adcValues = IntArray(4) { buffer.int }
-                    val macAddress = device.macAddress
-                    val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss", Locale.US).format(Date())
-                    val newReading = AdcReading(
-                        adcValues[0],
-                        adcValues[1],
-                        adcValues[2],
-                        adcValues[3],
-                        macAddress,
-                        timeStamp,
-                        userEmail
-                    )
-                    adcReadings.add(newReading)
-                    if (adcReadings.size == 10) {
-                        postDataToServer(adcReadings)
-                        adcReadings.clear()
-                    }
-                },
-                { throwable ->
-                    // Manejo de errores
-                    Log.e("DeviceActivity", "Error reading ADC values", throwable)
+        if (rxBleConnection != null) {
+            rxBleConnection!!.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
+                .repeatWhen { completed -> completed.delay(1, TimeUnit.SECONDS) }
+                .toObservable()
+                .subscribe(
+                    // ... (resto del código)
+                )
+        } else {
+            device.establishConnection(false)
+                .doOnNext { connection ->
+                    rxBleConnection = connection
                 }
-            )
-
-        stopSignal.connect()
+                .flatMap { connection ->
+                    connection.readCharacteristic(UUID.fromString(CHARACTERISTIC_UUID))
+                        .repeatWhen { completed -> completed.delay(1, TimeUnit.SECONDS) }
+                        .toObservable()
+                }
+                .subscribe(
+                    { characteristicValue ->
+                        val macAddress = device.macAddress
+                        val timeStamp = SimpleDateFormat("yyyy.MM.dd.HH.mm.ss", Locale.US).format(Date())
+                        val buffer = ByteBuffer.wrap(characteristicValue).order(ByteOrder.LITTLE_ENDIAN)
+                        val adcValues = IntArray(4) { buffer.int }
+                        val newReading = AdcReading(
+                            adcValues[0],
+                            adcValues[1],
+                            adcValues[2],
+                            adcValues[3],
+                            macAddress,
+                            timeStamp,
+                            userEmail
+                        )
+                        adcReadings.add(newReading)
+                        if (adcReadings.size == 10) {
+                            postDataToServer(adcReadings, callback)
+                            adcReadings.clear()
+                        }
+                    },
+                    { throwable ->
+                        Log.e("DeviceActivity", "Error while reading ADC values", throwable)
+                        callback?.onError(throwable.message ?: "Unknown error")
+                    }
+                )
+        }
     }
-
     private fun postDataToServer(adcReadings: List<AdcReading>, callback: ServerResponseCallback? = null) {
-        Log.d("DeviceActivity", "postDataToServer called with ${adcReadings.size} readings")
         val client = OkHttpClient()
         val jsonData = Gson().toJson(adcReadings)
         Log.d("DeviceActivity", "Posting data: $jsonData")
